@@ -1,0 +1,37 @@
+---
+title: "HW4"
+author: "Nikhil Gopal"
+date: "11/12/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+
+data <- read.table("/Users/nikhil/Downloads/state_market_tracker.tsv000", sep = "\t", header = TRUE)
+
+
+df <- data
+
+df$na_count <- apply(is.na(df), 1, sum)
+
+na_by_state <- df %>%
+  group_by(state) %>%
+  summarise(count = sum(na_count))
+
+#count on y
+ggplot(data=na_by_state, aes(x=state, y=count)) +
+  geom_bar(stat="identity") +
+  plot_annotation("Number of Missing Values by State")
+
+#count on x
+ggplot(data=na_by_state, aes(x=count, y=state)) +
+  geom_bar(stat="identity") + 
+  plot_annotation("Number of Missing Values by State")
+
+
+
+```
+

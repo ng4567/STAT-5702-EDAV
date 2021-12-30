@@ -1,0 +1,272 @@
+---
+title: "PSet1 [Group 46]"
+author: "Minhui Liao [ml4517] & Nikhil Gopal [nsg2127]"
+date: "9/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# this prevents package loading message from appearing in the rendered version of your problem set
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE)
+```
+
+Note: Grading is based both on your graphs and verbal explanations. Follow all best practices as discussed in class, including choosing appropriate parameters for all graphs. *Do not expect the assignment questions to spell out precisely how the graphs should be drawn. Sometimes guidance will be provided, but the absense of guidance does not mean that all choices are ok.*
+
+Read *Graphical Data Analysis with R*, Ch. 3
+
+### 1. Fast Food
+
+[6 points]
+
+Data: *fastfood* in **openintro** package
+
+a)  Draw multiple horizontal boxplots of `calories`, by `restaurant`. What do you observe?
+
+```{r}
+library(ggplot2)
+library(openintro)
+ggplot(fastfood, aes(y=reorder(restaurant, -calories, median), x=calories)) + 
+  geom_boxplot()+
+  labs(y = "restaurant")
+```
+
+**Most of the middle 50% of the menu items fall between the 300-750 calorie range, with most of the restaurant's medians being around 500 calories. After sorted data, we can see that Chick Fil-A's menu items median is the lowest. McDonald's has a few outlier menu items that have comparatively high calorie counts, with one dish with 2500 calories.**
+
+b)  Draw histograms, faceted by `restaurant`, for the same data. Describe one insight that was not visible in the boxplots.
+
+```{r}
+ggplot(fastfood, aes(calories, fill = restaurant)) + 
+  geom_histogram(boundary = 0, color = "black", binwidth = 80) + 
+  facet_wrap(~restaurant) + 
+  theme_grey(14)
+```
+
+**The histograms give us a better idea of the mode of each distributions as well as the frequency of calorie counts for the various restaurants. For example, it appears that less menu items from Chick Fil-A were in the dataset then Taco Bell.**
+
+c) Do crispy items have more calories than grilled items? Create a new variable, `cooktype` that is "Crispy" if the item name contains "Crispy" and "Grilled" if it contains "Grilled". (Leave out any items that contain both or neither.) Hint: useful functions: `filter()`, `str_detect()`, `xor()`. Next plot overlapping density curves of `calories`, one curve for Crispy and one curve for Grilled, on a single set of axes. Each curve should be a different color. What do you observe?
+
+```{r}
+library("stringr")
+library("dplyr")
+my_fastfood <- fastfood
+my_fastfood$cooktype <- sapply(my_fastfood$item, FUN = function(x){
+  if(str_detect(x, "Grilled") & str_detect(x, "Crispy")){
+    return(NA)
+  }
+  else if (str_detect(x, "Crispy")){
+    return("Crispy")
+  }
+  else if (str_detect(x, "Grilled")){
+    return("Grilled")
+  }
+  else {
+    return(NA)
+  }
+})
+  
+ggplot(data = filter(my_fastfood, cooktype=="Crispy" | cooktype=="Grilled"), 
+       aes(x = calories, color = cooktype, fill = cooktype)) + 
+  geom_density(alpha = .4) +
+  theme_grey(14)
+```
+
+**The Grilled food curve has a peak to the left of the Crispy food, which means most of Grilled food have less calories than the most of the crispy food. We can see that the majority of the area under the density curve for the crispy food is in higher calories count areas of the x axis. Additionally, the graph shows that a few crispy food menu items have relatively high calorie counts.**
+
+### 2. Temporal Lobes
+
+[4 points]
+
+Data: *mtl* in **openintro** package
+
+a)  Draw two histograms--one with base R and the other with **ggplot2**--of the variable representing the thickness of the subiculum subregion of the medial temporal lobe without setting any parameters. What is the default method each uses to determine the number of bins? (For base R, show the calculation.) Which do you think is a better choice for this dataset and why?
+
+**Base R:**
+```{r}
+data(mtl, package = "openintro")
+hist(mtl$asubic, main = "Base R Histogram of subiculum subregion", xlab = "subiculum subregion")
+```
+
+**ggplot2:**
+```{r}
+ggplot(mtl)+
+  geom_histogram(mapping=aes(x=asubic)) +
+  labs(title="ggplot2 Histogram of subiculum subregion")
+```
+
+**For base R:**
+
+**The default method to determine the number of bins is using "Sturges" formula, the calculation is below:**
+
+```{r}
+# Sturges' formula
+ceiling(log2(length(mtl$asubic)) + 1)
+# Or just use the nclass.Sturges function 
+nclass.Sturges(mtl$asubic)
+```
+
+
+**For ggplot2:**
+
+**The ggplot2 uses 30 bins by default.**
+
+Which is better?
+
+**The base R plot is better. The dataset only has 35 observations, and ggplot2 automatically chooses a bin size of 30, which results in bin sizes that are too small to accurately convey the shape of the distribution. Having too many bins makes the histogram overly complicated to read, and makes the ggplot2 graph less visually appealing than the base R graph.**
+
+
+b) Draw two histograms of the `age` variable with boundaries at multiples of 5, one right closed and one right open. Every boundary should be labeled (45, 50, 55, etc.)
+
+```{r}
+par(mfrow=c(1,2))
+
+hist(mtl$age, xlab = "age", right = T, main = "Right Closed")
+hist(mtl$age, xlab = "age", right = F, main = "Right Open")
+```
+
+
+c)  Adjust parameters--the same for both--so that the right open and right closed versions become identical. Explain your strategy.
+
+```{r}
+par(mfrow=c(1,2))
+
+hist(mtl$age, xlab = "age", right = T, main = "Right Closed", breaks = seq(45.5, 75.5, 5), axes = F)
+axis(1, at = seq(45.5, 75.5, 5), cex.axis = 0.7)
+axis(2, at = 0:8, las = 1)
+
+hist(mtl$age, xlab = "age", right = F, main = "Right Open", breaks = seq(45.5, 75.5, 5), axes = F)
+axis(1, at = seq(45.5, 75.5, 5), cex.axis = 0.7)
+axis(2, at = 0:8, las = 1)
+
+```
+
+**For this question, we adjusted the boundaries of the breaks to start at 45.5 and end at 75.5 in increments of 5, instead of going from 45-75. Doing this caused a few data (the ones that are multiples of 5) to be shifted into the next bar of the histogram, resulting in identical looking histograms between both groups. Doing this also avoided a creation of a separate bar for the one person aged 76, which is not substantially different enough to warrant the creation of a separate bar.**
+
+### 3. Soybeans
+
+[8 points]
+
+Data: *australia.soybean* in **agridata** package
+
+a)  Use QQ (quantile-quantile) plots with theoretical normal lines to compare `yield` for the four locations (`loc`). For which location does the `yield` appear to be closest to a normal distribution?
+
+```{r}
+data(australia.soybean, package = "agridat")
+ggplot(australia.soybean, aes(sample = yield)) +
+  geom_qq(aes(colour=loc)) + 
+  geom_qq_line()+
+  facet_wrap(~loc)+
+  labs(title="Q-Q Plots", x="Theoretical Quantiles", y="Sample Quantiles")
+```
+
+**We found that *Lawes* does the "yield" appear to be closest to a normal distribution, since most of points plotted on the graph lies on a straight normal line.**
+
+b)  Draw density histograms with density curves and theoretical normal curves overlaid of `yield` for the four locations.
+
+```{r}
+library(ggh4x)
+ggplot(australia.soybean, aes(x = yield)) +
+  geom_histogram(aes(y=..density.., fill = loc)) + 
+  geom_density(geom = "line", alpha=.2, aes(col="Density Curves"))+
+  stat_theodensity(aes(y = after_stat(density), col="theoretical normal curves")) +
+  facet_wrap(~loc)+
+  labs(title="Density Histogram Plots", x="Yield", y="Density", fill="locations", col="Curves")
+```
+
+
+c)  Perform Shapiro-Wilk tests for normality for `yield` for each location using the `shapiro.test()` function and interpret the results.
+
+```{r}
+library(dplyr)
+australia.soybean %>%
+  group_by(loc) %>%
+  summarise("test statistic" = shapiro.test(yield)$statistic,
+            "p-value" = shapiro.test(yield)$p.value)
+```
+
+**Based on the results:**
+
+**For Brookstead, we can find that the p-value is 0.2594316157, which is greater than 0.05. Thus we fail to reject the null hypothesis and conclude that the yield data for Brookstead location is normally distributed.**
+
+**For Lawes, we can find that the p-value is 0.3279104813, which is greater than 0.05. Thus we fail to reject the null hypothesis and conclude that the yield data for Lawes location is normally distributed.**
+
+**For Nambour, we can find that the p-value is 0.0191118857	, which is less than 0.05. Thus we may reject the null hypothesis and conclude that the yield data for Nambour location is not normally distributed.**
+
+**For RedlandBay, we can find that the p-value is 0.0004116915, which is less than 0.05. Thus we may reject the null hypothesis and conclude that the yield data for RedlandBay location is not normally distributed.**
+
+d)  Did all of the methods for testing for normality (a, b, and c) produce the same results? Briefly explain.
+
+**Based on the results above:**
+
+**For Brookstead, Lawes, and RedlandBay, we can see that tests (a, b, and c) produce the same result that the yield data for Brookstead and Lawes locations are normally distributed, and the yield data for RedlandBay location is not normally distributed.**
+
+**For Nambour, we find tests a and b produce results that the yield data for Nambour location is kind of slightly normally distributed. However, Shapiro-Wilk test shows that the yield data for Nambour location is not normally distributed.**
+
+
+### 4. Doctors
+
+[4 points]
+
+Data: *breslow* dataset in **boot** package
+
+Draw two histograms of the each deaths attributed to coronary artery disease among doctors in the *breslow* dataset, one for smokers and one for non-smokers. )Hint: read the help file `?breslow` to understand the data.) Age is the variable.
+
+
+```{r}
+library(boot)
+data(breslow, package = "boot")
+
+ggplot(breslow) + 
+  geom_col(aes(x = age, y = y, fill = factor(smoke))) +
+  facet_grid(~ factor(smoke)) +
+  theme_grey(14) +
+  labs(title = "Histogram of CA Deaths Among British Male Doctors",
+       y = "Number of deaths", fill = "Smoking Status") +
+  scale_fill_discrete(labels=c("0 No Smoke", "1 Smoke"))
+```
+
+
+### 5. Loans
+
+[8 points]
+
+Data: *loans_full_schema* in **openintro** package
+
+a) Use appropriate techniques to describe the distribution of the `loan_amount` variable noting interesting features.
+
+```{r}
+data(loans_full_schema, package = "openintro")
+
+hist(loans_full_schema$loan_amount, main = "Histogram of Loan Amounts", xlab = "Loan Amount (USD)")
+
+ggplot(loans_full_schema, aes(loan_amount)) + 
+  geom_boxplot()+
+  labs(x = "Loan Amount (USD)", title = "Boxplot of Loan Amounts")
+
+```
+
+**From the histogram and boxplot, we can see the loan amounts are slightly skewed right, as the number of loans in a given bin tends to decrease as the loan amount increases. **
+
+
+b) Create horizontal boxplots of `loan_amount`, one for each level of `loan_purpose`.
+
+```{r}
+ggplot(loans_full_schema, aes(y=reorder(loan_purpose, -loan_amount, median), x=loan_amount)) + 
+  geom_boxplot()+
+  labs(y = "loan purpose", x = "loan amount")
+```
+
+c) Create ridgeline plots (package **ggridges**) for the same data as in b).
+
+```{r}
+library("ggridges")
+ggplot(loans_full_schema, aes(x = loan_amount, y = reorder(loan_purpose, -loan_amount, median))) +
+  geom_density_ridges(fill = "blue", alpha = .5, scale = 1) + 
+  theme_grey(14) +
+  labs(y = "loan purpose", x = "loan amount")
+```
+
+d)  Compare b) and c). Which do you think is more effective for this data and why?
+
+**For this data, boxplots appear to be more appropriate. Ridgeline plots are most useful when the distributions of the data tend to be substantially different (bimodal vs unimodal or normal vs exponential for example). In this case, the data aren't substantially different enough and all tend to be unimodal. Boxplots are more useful here, because they allow vieweres to see precise differences in median and quartiles between different loan purposes, and communicate the presence of outliers without giving so much information as to overwhelm the viewer. When the distributions are similar, providing a boxplot allows the viewer to focus on the subtle differences between the distributions.**
+

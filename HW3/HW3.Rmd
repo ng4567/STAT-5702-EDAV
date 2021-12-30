@@ -1,0 +1,80 @@
+---
+title: "HW3"
+author: "Nikhil Gopal"
+date: "10/19/2021"
+output: html_document
+---
+
+**1. Crime**
+
+```{r}
+
+rm(list = ls())
+library(tidyverse)
+library(GGally)
+```
+
+**1a Create a parallel coordinates plot showing the number of crimes in each of the categories listed for 2020. Show actual counts; do not rescale. Your graph should have one line for each county in New York State. (Use GGally::ggparcoord()) **
+
+```{r}
+#read data
+df <- read.csv("https://data.ny.gov/api/views/ca8h-8gjq/rows.csv")
+
+#convert cols from character to factor
+df$County <- as.factor(df$County)
+df$Agency <- as.factor(df$Agency)
+df$Region <- as.factor(df$Region)
+
+
+
+
+#subset data
+df2020 <- subset(df, Year == 2020)
+
+#remove year column since every year is 2020
+df2020 <- subset(df, select = -Year)
+
+df2 <- df2020 %>% group_by(County) %>%
+  summarise(Murder = sum(Murder, na.rm = TRUE), Rape = sum(Rape, na.rm = TRUE),
+            Robbery = sum(Robbery, na.rm = TRUE), Agg.Assault = sum(Aggravated.Assault, na.rm = TRUE), Burglary = sum(Burglary, na.rm = TRUE), Larceny = sum(Larceny, na.rm = TRUE), MVTheft = sum(Motor.Vehicle.Theft, na.rm = TRUE), Region = Region) %>%
+  ungroup()
+
+#Make parallel coordinates plot
+ggparcoord(df2, columns = 2:8) 
+  
+
+```
+
+
+**Now experiment with alpha blending, splines, and rescaling to create the clearest version of the plot that you can. What patterns do you observe? (Use GGally::ggparcoord())**
+
+
+```{r}
+ggparcoord(df2, columns = 2:8, scale = "GlobalMinMax") 
+
+ggparcoord(df2, columns = 2:8, scale = "uniminmax")
+
+ggparcoord(df2, columns = 2:8, alphaLines = 0.3, splineFactor = 5) 
+
+ggparcoord(df2, columns = 2:8, scale = "std", alphaLines = 0.3, splineFactor = 5)
+
+```
+
+I noticed that using the standardized scale seemed to be the most useful. Since distributions of data are so different, global minmax and uniminmax are not suitable options. Standardizing the data is useful because different crimes are committed with different frequencies, and so this scale allows you to identify certain counties that have high rates of certain crimes. I also selected the splines value to be 5 because having gaps between the lines that are too big makes values seem further apart than they actually are.
+
+The graph shows that certain counties have higher levels of crime than others. Amount of crimes in  basically every category seems to be correlated with a few police departments, with the majority of police departments in the center having low frequency of crime. Intuitively, this makes sense.
+
+**1c**
+
+**Create an interactive parallel coordinates plot of the same data, coloring by Region. Discuss outliers, clusters, and correlations in detail. **
+
+```{r}
+
+ggparcoord(df2, columns = 2:8, scale = "std", groupColumn = "Region", title = "Crimes by County in NYS 2020 (Standardized)")
+
+
+ggparcoord(df2, columns = 2:8, groupColumn = "Region", title = "Crimes by County in NYS 2020", scale = "GlobalMinMax")
+
+```
+New York City appears to have higher rates of crime in nearly every category. There appear to be a few upstate counties that have similar levels of rape, Burglary, Larceny and MVTheft to NYC, but in general NYC has higher rates of crime. This is to be expected, as NYC is more densely popuated, and thus should have higher rates of crime than the rest of the state.
+

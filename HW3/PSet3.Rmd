@@ -1,0 +1,213 @@
+---
+title: "PSet 3"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+# this prevents package loading message from appearing in the rendered version of your problem set
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(GGally)
+library(vcd)
+library(ggalluvial)
+library(reshape)
+```
+
+
+**1. Crime**
+
+
+**1a Create a parallel coordinates plot showing the number of crimes in each of the categories listed for 2020. Show actual counts; do not rescale. Your graph should have one line for each county in New York State. (Use GGally::ggparcoord()) **
+
+```{r}
+#read data
+df <- read.csv("https://data.ny.gov/api/views/ca8h-8gjq/rows.csv")
+
+#convert cols from character to factor
+df$County <- as.factor(df$County)
+df$Agency <- as.factor(df$Agency)
+df$Region <- as.factor(df$Region)
+
+
+
+
+#subset data
+df2020 <- subset(df, Year == 2020)
+
+#remove year column since every year is 2020
+df2020 <- subset(df, select = -Year)
+
+df2 <- df2020 %>% group_by(County) %>%
+  summarise(Murder = sum(Murder, na.rm = TRUE), Rape = sum(Rape, na.rm = TRUE),
+            Robbery = sum(Robbery, na.rm = TRUE), Agg.Assault = sum(Aggravated.Assault, na.rm = TRUE), Burglary = sum(Burglary, na.rm = TRUE), Larceny = sum(Larceny, na.rm = TRUE), MVTheft = sum(Motor.Vehicle.Theft, na.rm = TRUE), Region = Region) %>%
+  ungroup()
+
+#Make parallel coordinates plot
+ggparcoord(df2, columns = 2:8) 
+  
+
+```
+
+
+**Now experiment with alpha blending, splines, and rescaling to create the clearest version of the plot that you can. What patterns do you observe? (Use GGally::ggparcoord())**
+
+
+```{r}
+ggparcoord(df2, columns = 2:8, scale = "GlobalMinMax") 
+
+ggparcoord(df2, columns = 2:8, scale = "uniminmax")
+
+ggparcoord(df2, columns = 2:8, alphaLines = 0.3, splineFactor = 0) 
+
+ggparcoord(df2, columns = 2:8, scale = "std", alphaLines = 0.3, splineFactor = 0)
+
+```
+
+I noticed that using the standardized scale seemed to be the most useful. Since distributions of data are so different, global minmax and uniminmax are not suitable options. Standardizing the data is useful because different crimes are committed with different frequencies, and so this scale allows you to identify certain counties that have high rates of certain crimes. I also selected the splines value to be 0 because having gaps between the lines that are too big makes values seem further apart than they actually are.
+
+The graph shows that certain counties have higher levels of crime than others. Amount of crimes in  basically every category seems to be correlated with a few police departments, with the majority of police departments in the center having low frequency of crime. Intuitively, this makes sense.
+
+**1c**
+
+**Create an interactive parallel coordinates plot of the same data, coloring by Region. Discuss outliers, clusters, and correlations in detail. **
+
+```{r}
+
+ggparcoord(df2, columns = 2:8, scale = "std", groupColumn = "Region", title = "Crimes by County in NYS 2020 (Standardized)")
+
+
+ggparcoord(df2, columns = 2:8, groupColumn = "Region", title = "Crimes by County in NYS 2020", scale = "GlobalMinMax")
+
+```
+New York City appears to have higher rates of crime in nearly every category. There appear to be a few upstate counties that have similar levels of rape, Burglary, Larceny and MVTheft to NYC, but in general NYC has higher rates of crime. This is to be expected, as NYC is more densely popuated, and thus should have higher rates of crime than the rest of the state.
+
+### 2. Sleep
+
+[10 points]
+
+Data: `SleepStudy` from **Lock5withR** package
+
+Draw the following graphs and answer the questions.
+
+a) Is there an association between `ClassYear` and `AnxietyStatus`? Between `ClassYear` and `NumEarlyClass`? Justify your answers with mosaic plots.
+```{r}
+library(Lock5withR)
+df <- SleepStudy
+attach(df)
+
+
+
+#vcd::mosaic(fct_relevel(AnxietyStatus, "normal") ~ ClassYear, df,
+#              direction = c("v", "h"), )
+
+df$AnxietyStatus <- fct_relevel(AnxietyStatus, "normal")
+
+vcd::mosaic(AnxietyStatus ~ ClassYear, df,
+              direction = c("v", "h"), )
+
+
+vcd::mosaic(NumEarlyClass ~ClassYear, direction = c("v", "h"))
+
+
+
+```
+There does not seem to be a strong association between anxiety status and class year. There is a clear association between number of early classes and class year. The number of early classes decreases with increasing class year.
+
+b) Perform chi square tests to test for associations between the sets of variables graphed in part a). What are the results? Discuss in relation to the mosaic plots.
+```{r}
+
+anxiety_year <- chisq.test(df$AnxietyStatus, df$ClassYear, correct = FALSE)
+anxiety_year$observed
+anxiety_year$expected
+anxiety_year
+
+numearlyclass_year <- chisq.test(df$NumEarlyClass, df$ClassYear, correct = FALSE)
+numearlyclass_year$observed
+numearlyclass_year$expected
+numearlyclass_year
+
+```
+
+These results confirm what we see in the mosaic plots in part B. The chi square test results for anxiety status and class year have a low chi-squared value and a p-value greater than .05 significance level. Therefore we cannot reject the null hypothesis that anxiety status and class year are not associated (independent). The chi square test results for class year and number of early classes have a high chi-squared value and a p-value of less than 0.05 significance level. Therefore we reject the null hypothesis and conclude that class year and number of early classes have a significant relationship.
+
+c) How is the relationship between anxiety status and number of early classes affected by class year? Create a mosaic plot showing all three variables, treating anxiety status as the dependent variable. Discuss the results. 
+```{r}
+#vcd::mosaic(fct_relevel(AnxietyStatus, "normal") ~NumEarlyClass + ClassYear, df, #direction = c("v", "v", "h"))
+
+
+vcd::mosaic(AnxietyStatus ~NumEarlyClass + ClassYear, df, direction = c("v", "v", "h"))
+```
+The impact that class year has on the relationship between anxiety status and number of early classes is not clear from the graphs. It appears that any differences between class years are only marginal. This data is purely observational, and any statements on causality would need to be made with different data, as there might be and likely are other factors that affect anxiety status. Perhaps already anxious students tend to take early classes for example.
+
+d) Use the base `pairs()` function to draw a mosaic pairs plot of all all categorical (factor) variables in `SleepStudy`. (Note: The **vcd** package must be loaded for `pairs()` to find the correct method.) Name a pair of variables which appear to have a very strong association. Name a pair of variables which appear not to be associated.
+```{r fig.width=13, fig.height=13} 
+
+str(df) #identify categorical variables
+cat_df <- select(df, LarkOwl, DepressionStatus, AnxietyStatus, Stress, AlcoholUse, Sex, allNighter, earlyClass)
+pairs(table(cat_df), highlighting = 2)
+
+```
+Pair with strong association- All nighter and sex;, more females pull all nighters.
+Pair not associated- Early class and stress
+
+### 3. Wait List
+
+[10 points]
+
+The file `stats_wl.csv` contains information about waitlist movement for a Fall 2021 Columbia U undergraduate statistics class.
+
+There are 640 rows and 4 variables:
+
+`Name` name of student (actual names were replaced with names generated from the **randomNames** package)
+
+`Date` since SSOL updates overnight, waitlist positions were collected each morning during the change of program period
+
+`Priority` position in waitlist, for example `1` = top position on list
+
+`Status` final outcome, *Registered* = received a place in class and remained; *Dropped Class* = received a place in class and left; *Left List* = left waiting list; *Joined* = remained on waiting list at the end of the change of program period. (Note that the status reflects what ultimately happened, not what the status was on a particular date.)
+
+Create an alluvial diagram that shows waitlist movement during the change of program period. It is not necessary to include the `Name` column in the diagram, but it should be possible to observe movement of individual students: for example, that the student who was 22nd in the waitlist on Sept 9th moved up to 15th place on Sept 16th and then left the list.
+
+```{r, fig.height=13, fig.width=13}
+#df <- read.csv("/Users/Victoria/Downloads/stats_wl.csv")
+df <- read.csv("/Users/d/Downloads/stats_wl.csv")
+attach(df)
+
+df$Priority <- as.character(df$Priority)
+
+df$Date <- as.Date(df$Date)
+
+for(n in unique(df$Name)){
+  df <- df %>% add_row(
+    Name = n,
+    Date = max(df[df$Name == n,]$Date + 1),
+    Priority = df[df$Name == n,]$Status[1],
+    Status = df[df$Name == n,]$Status[1]
+    )
+}
+
+
+
+df$Priority <- factor(df$Priority,
+                      levels=c(as.character(c(1:53)), c('Registered', 'Dropped Class', 'Joined', 'Left List')))
+
+df2 <- df %>% pivot_wider(names_from = Date, values_from = Priority)
+df2_lodes <- to_lodes_form(df2, axes = c(3:16)) %>% na.omit()
+
+
+ggplot(df2_lodes, 
+  aes(alluvium = alluvium, x=x, y=1, stratum = stratum)) +
+  geom_alluvium(aes(fill = Status), color="black") +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  ggtitle("Fall 2021 Columbia U Movement of Students on Waitlist") +
+  labs(x = "Date", y = "Position on Waitlist")
+
+
+```
+
+
