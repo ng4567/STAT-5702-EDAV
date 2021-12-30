@@ -1,5 +1,5 @@
 # STAT-5702-EDAV
-Repo containing my files for STAT 5702 Exploratory Data Analysis and Visualization Class
+Repo containing my work for my Columbia University STAT 5702 Exploratory Data Analysis and Visualization Class
 
 Some notable projects include:
 
